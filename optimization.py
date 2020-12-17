@@ -8,18 +8,24 @@ import random
 data = pd.read_csv('dj38.tsp', sep=' ')
 
 
-def operator(state):
+def operator(state, mode='a'):
     ''' permutate 2 cities in state
     '''
 
-    # select 2 random positiions
-    positions = random.sample(range(1, 38), 2)
-    a = state[positions[0]]
-    b = state[positions[1]]
-
-    # exchange
-    state[positions[0]] = b
-    state[positions[1]] = a
+    if mode == 'a':
+        # select 2 random positiions
+        positions = random.sample(range(1, 38), 2)
+        a = state[positions[0]]
+        b = state[positions[1]]
+        # exchange
+        state[positions[0]] = b
+        state[positions[1]] = a
+    elif mode == 'b':
+        # select 4 random positiions
+        positions = random.sample(range(1, 38), 4)
+        a = state[positions[0]]; b = state[positions[1]]; c = state[positions[2]]; d = state[positions[3]]
+        # exchange
+        state[positions[0]] = b; state[positions[1]] = a; state[positions[2]] = d; state[positions[3]] = c
 
     return state
 
@@ -47,46 +53,52 @@ def evaluation_function(state, data):
 
 
 
-def ClimbHill(data, expansion_size = 10):
+def ClimbHill(data, expansion_size = 30, mode='a'):
 
-    ## random initialization of state
-    state = random.sample(range(1, 39), 38)
-
-    # init variables
+    
+    # initialization
+    state = random.sample(range(1, 39), 38)   
     state_cost = evaluation_function(state, data)
     generation = 0
-    sons = []
-    sons_costs = []
+    local_stuck = 0
 
-    print('initial state: ', state)
-    print('initial cost: ', state_cost)
+    print('estado inicial: ', state)
+    print('custo inicial: ', state_cost)
 
+    # search looop
     found = False
     while found == False:
         # expande filhos do pai
         x=0
+        sons_costs = []
+        sons = []
         while x < expansion_size:
-            permuted_state = operator(state)
+            permuted_state = operator(state, mode=mode)
             if permuted_state not in sons:
                 sons = [list(permuted_state)] + sons
                 sons_costs.append(evaluation_function(list(permuted_state), data))
             x+=1
 
-        # verificar se filho de menor custo
-        # tem custo menor que pai, se sim, filho vira pai,
-        # se nao, retorna o pai
+        # get min cost
         min_son_cost = min(sons_costs)
-        print(min_son_cost)
-        if min_son_cost < state_cost:
+        generation += 1
+
+        # verify local minimum
+        if min_son_cost == state_cost:
+            local_stuck += 1
+            if local_stuck >= 10:
+                print('estado final: ', state, '\ncusto final: ', state_cost, '\ngeracoes: ', generation)
+                break 
+
+        # DECISION: verify father and son costs
+        if min_son_cost <= state_cost:
             state = sons[sons_costs.index(min(sons_costs))]
             state_cost = min(sons_costs)
-            generation += 1
-            print('geracao: ', generation, '\n')
         else: 
-            print('estado final: ', state)
-            print('custo final: ', state_cost)
-            print('geracoes: ', generation)
-            return state, state_cost, generation
+            print('estado final: ', state, '\ncusto final: ', state_cost, '\ngeracoes: ', generation)
+            break
 
 
-ClimbHill(data, expansion_size = 300)
+for i in range(10):
+    print('Search: ', i)
+    ClimbHill(data, expansion_size = 100, mode='b')
